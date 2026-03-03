@@ -2,19 +2,7 @@
 # app.py
 # AI Dynamic Ticket Pricing — Interactive Dashboard
 # Author: Ogbebor Osaheni
-#
-# PURPOSE: Production-grade Streamlit demo that lets anyone
-# interact with the pricing model without touching Python.
-#
-# WHAT THIS DEMO DOES:
-# 1. Takes event inputs from the user
-# 2. Runs the trained XGBoost model
-# 3. Returns a price recommendation with SHAP explanation
-# 4. Shows ethics compliance status
-# 5. Displays market overview charts
-#
-# This is the difference between a data science project
-# and a shipped AI product.
+# Design: Premium fintech — deep navy + gold/amber accents
 # ============================================================
 
 import streamlit as st
@@ -26,229 +14,116 @@ import shap
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import xgboost as xgb
-
-# ============================================================
-# PAGE CONFIG — must be first Streamlit command
-# ============================================================
+import matplotlib.font_manager as fm
 
 st.set_page_config(
-    page_title="AI Ticket Pricing — UK Live Events",
-    page_icon="🎟️",
+    page_title="AI Ticket Pricing — Ogbebor Osaheni",
+    page_icon="🎟",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
 # ============================================================
-# CUSTOM CSS — professional dark theme
+# DESIGN SYSTEM — Navy + Gold
 # ============================================================
 
 st.markdown("""
 <style>
-    /* Dark professional theme */
-    .stApp {
-        background-color: #0a0e1a;
-        color: #e8eaf0;
-    }
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
 
-    /* Main header */
-    .main-header {
-        background: linear-gradient(135deg, #1a1f35 0%, #0d1225 100%);
-        border: 1px solid #2a3050;
-        border-radius: 12px;
-        padding: 32px 36px;
-        margin-bottom: 28px;
-    }
+/* ── Base ── */
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif;
+}
 
-    .main-title {
-        font-family: 'Georgia', serif;
-        font-size: 2.2rem;
-        font-weight: 700;
-        color: #ffffff;
-        margin: 0 0 8px 0;
-        letter-spacing: -0.5px;
-    }
+.stApp {
+    background-color: #06091a;
+}
 
-    .main-subtitle {
-        font-size: 1.0rem;
-        color: #8892b0;
-        margin: 0;
-        font-family: 'Courier New', monospace;
-    }
+/* ── Sidebar ── */
+[data-testid="stSidebar"] {
+    background-color: #080c1f;
+    border-right: 1px solid #1a2040;
+}
 
-    /* Metric cards */
-    .metric-card {
-        background: #111627;
-        border: 1px solid #1e2640;
-        border-radius: 10px;
-        padding: 20px 24px;
-        text-align: center;
-        transition: border-color 0.2s;
-    }
+[data-testid="stSidebar"] .block-container {
+    padding-top: 2rem;
+}
 
-    .metric-card:hover {
-        border-color: #3d5af1;
-    }
+/* ── Sidebar labels ── */
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] .stMarkdown p {
+    color: #8892b8 !important;
+    font-size: 0.78rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: 'DM Mono', monospace !important;
+}
 
-    .metric-value {
-        font-size: 2.0rem;
-        font-weight: 700;
-        color: #3d5af1;
-        font-family: 'Courier New', monospace;
-        display: block;
-    }
+/* ── Sidebar section titles ── */
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: #c9a84c !important;
+    font-family: 'Playfair Display', serif !important;
+    font-size: 1.0rem !important;
+    border-bottom: 1px solid #1a2040;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+}
 
-    .metric-label {
-        font-size: 0.78rem;
-        color: #8892b0;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-top: 4px;
-        display: block;
-    }
+/* ── Sliders ── */
+[data-testid="stSlider"] > div > div > div > div {
+    background: #c9a84c !important;
+}
 
-    /* Recommendation box */
-    .rec-box-positive {
-        background: linear-gradient(135deg, #0d2137 0%, #0a1a2e 100%);
-        border: 2px solid #3d5af1;
-        border-radius: 12px;
-        padding: 28px 32px;
-        text-align: center;
-    }
+/* ── Selectbox ── */
+[data-testid="stSelectbox"] > div > div {
+    background-color: #0d1230 !important;
+    border: 1px solid #1a2040 !important;
+    color: #e8eaf0 !important;
+    border-radius: 8px !important;
+}
 
-    .rec-box-negative {
-        background: linear-gradient(135deg, #1a0d2e 0%, #130a22 100%);
-        border: 2px solid #8b5cf6;
-        border-radius: 12px;
-        padding: 28px 32px;
-        text-align: center;
-    }
+/* ── Checkboxes ── */
+[data-testid="stCheckbox"] label {
+    color: #8892b8 !important;
+    font-size: 0.82rem !important;
+}
 
-    .rec-price {
-        font-size: 3.2rem;
-        font-weight: 700;
-        color: #ffffff;
-        font-family: 'Georgia', serif;
-        display: block;
-        line-height: 1.1;
-    }
+/* ── Divider ── */
+hr {
+    border-color: #1a2040 !important;
+    margin: 1.5rem 0 !important;
+}
 
-    .rec-adjustment-positive {
-        font-size: 1.3rem;
-        color: #4ade80;
-        font-family: 'Courier New', monospace;
-        font-weight: 600;
-        display: block;
-        margin-top: 6px;
-    }
-
-    .rec-adjustment-negative {
-        font-size: 1.3rem;
-        color: #f87171;
-        font-family: 'Courier New', monospace;
-        font-weight: 600;
-        display: block;
-        margin-top: 6px;
-    }
-
-    /* Ethics badge */
-    .ethics-pass {
-        background: #052e1c;
-        border: 1px solid #16a34a;
-        border-radius: 8px;
-        padding: 10px 16px;
-        color: #4ade80;
-        font-size: 0.85rem;
-        font-family: 'Courier New', monospace;
-        margin: 6px 0;
-        display: block;
-    }
-
-    .ethics-warn {
-        background: #2d1b00;
-        border: 1px solid #d97706;
-        border-radius: 8px;
-        padding: 10px 16px;
-        color: #fbbf24;
-        font-size: 0.85rem;
-        font-family: 'Courier New', monospace;
-        margin: 6px 0;
-        display: block;
-    }
-
-    /* Section headers */
-    .section-header {
-        font-family: 'Georgia', serif;
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: #c8d0e8;
-        border-bottom: 1px solid #1e2640;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }
-
-    /* Sidebar styling */
-    .css-1d391kg, [data-testid="stSidebar"] {
-        background-color: #080c18;
-        border-right: 1px solid #1e2640;
-    }
-
-    /* Override Streamlit defaults */
-    .stSelectbox > div > div {
-        background-color: #111627;
-        border-color: #2a3050;
-        color: #e8eaf0;
-    }
-
-    .stSlider > div > div > div {
-        background-color: #3d5af1;
-    }
-
-    div[data-testid="metric-container"] {
-        background-color: #111627;
-        border: 1px solid #1e2640;
-        border-radius: 10px;
-        padding: 16px;
-    }
-
-    /* Explanation text */
-    .explain-text {
-        color: #8892b0;
-        font-size: 0.88rem;
-        line-height: 1.6;
-        font-family: 'Courier New', monospace;
-        background: #080c18;
-        border-left: 3px solid #3d5af1;
-        padding: 12px 16px;
-        border-radius: 0 8px 8px 0;
-        margin: 12px 0;
-    }
+/* ── Hide Streamlit chrome ── */
+#MainMenu, footer, header { visibility: hidden; }
+.block-container {
+    padding-top: 1.5rem !important;
+    padding-bottom: 2rem !important;
+    max-width: 1400px;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================================
-# LOAD MODEL AND DATA
+# LOAD MODEL
 # ============================================================
 
 @st.cache_resource
 def load_model():
-    """Load model and encoders once and cache them."""
     base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
     with open(os.path.join(base, "model", "ticket_pricing_model.pkl"), "rb") as f:
         model = pickle.load(f)
     with open(os.path.join(base, "model", "label_encoders.pkl"), "rb") as f:
         encoders = pickle.load(f)
     with open(os.path.join(base, "model", "feature_list.pkl"), "rb") as f:
         features = pickle.load(f)
-
     df = pd.read_csv(os.path.join(base, "data", "ticket_transactions.csv"))
-
     return model, encoders, features, df
 
 model, label_encoders, FEATURES, df_data = load_model()
 
-# Venue and genre options
 VENUES = [
     "O2 Arena, London",
     "Manchester Arena",
@@ -261,25 +136,14 @@ VENUES = [
 ]
 
 VENUE_PREMIUMS = {
-    "O2 Arena, London":               0.22,
-    "Manchester Arena":               0.08,
-    "First Direct Arena, Leeds":      0.02,
-    "Utilita Arena, Birmingham":      0.05,
-    "SSE Hydro, Glasgow":             0.03,
-    "Motorpoint Arena, Cardiff":      0.00,
+    "O2 Arena, London": 0.22,
+    "Manchester Arena": 0.08,
+    "First Direct Arena, Leeds": 0.02,
+    "Utilita Arena, Birmingham": 0.05,
+    "SSE Hydro, Glasgow": 0.03,
+    "Motorpoint Arena, Cardiff": 0.00,
     "Glastonbury Festival, Somerset": 0.35,
-    "Boardmasters, Newquay":          0.15,
-}
-
-VENUE_WEATHER_SENSITIVE = {
-    "O2 Arena, London":               False,
-    "Manchester Arena":               False,
-    "First Direct Arena, Leeds":      False,
-    "Utilita Arena, Birmingham":      False,
-    "SSE Hydro, Glasgow":             True,
-    "Motorpoint Arena, Cardiff":      False,
-    "Glastonbury Festival, Somerset": True,
-    "Boardmasters, Newquay":          True,
+    "Boardmasters, Newquay": 0.15,
 }
 
 GENRES = ["Pop", "Rock", "R&B", "Electronic/Dance",
@@ -293,7 +157,7 @@ TIER_BASE_PRICES = {
 }
 
 # ============================================================
-# PREDICTION FUNCTION
+# PREDICTION
 # ============================================================
 
 def make_prediction(venue, genre, ticket_tier, days_to_event,
@@ -325,348 +189,372 @@ def make_prediction(venue, genre, ticket_tier, days_to_event,
     }
 
     df_input = pd.DataFrame([input_data])
-
-    # Encode categoricals
     for col in ["venue", "genre"]:
-        le = label_encoders[col]
-        df_input[col] = le.transform(df_input[col])
-
+        df_input[col] = label_encoders[col].transform(df_input[col])
     df_input = df_input[FEATURES]
 
-    prediction = model.predict(df_input)[0]
-    prediction = np.clip(prediction, -28.0, 22.0)
-
-    # SHAP explanation
-    explainer   = shap.TreeExplainer(model)
-    shap_values = explainer.shap_values(df_input)[0]
+    prediction   = float(model.predict(df_input)[0])
+    prediction   = np.clip(prediction, -28.0, 22.0)
+    explainer    = shap.TreeExplainer(model)
+    shap_values  = explainer.shap_values(df_input)[0]
 
     return prediction, shap_values, df_input, explainer.expected_value
 
 # ============================================================
-# SHAP WATERFALL CHART
+# SHAP CHART — navy/gold palette
 # ============================================================
 
-def plot_shap_waterfall(shap_values, feature_names, title="Why this price?"):
-    feature_impacts = list(zip(feature_names, shap_values))
-    feature_impacts.sort(key=lambda x: abs(x[1]), reverse=True)
-    top = feature_impacts[:8]
+def plot_shap(shap_values, feature_names, title=""):
+    impacts = sorted(zip(feature_names, shap_values),
+                     key=lambda x: abs(x[1]), reverse=True)[:8]
+    labels = [f[0].replace("_", " ").title() for f in impacts]
+    values = [f[1] for f in impacts]
+    colors = ['#c9a84c' if v > 0 else '#e05c5c' for v in values]
 
-    labels = [f[0].replace("_", " ").title() for f in top]
-    values = [f[1] for f in top]
-    colors = ['#4ade80' if v > 0 else '#f87171' for v in values]
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    fig.patch.set_facecolor('#0d1230')
+    ax.set_facecolor('#0d1230')
 
-    fig, ax = plt.subplots(figsize=(9, 5))
-    fig.patch.set_facecolor('#111627')
-    ax.set_facecolor('#111627')
-
-    bars = ax.barh(labels, values, color=colors, height=0.6, edgecolor='none')
-    ax.axvline(x=0, color='#3d5af1', linewidth=1.5, alpha=0.8)
+    bars = ax.barh(labels, values, color=colors,
+                   height=0.55, edgecolor='none')
+    ax.axvline(x=0, color='#2a3060', linewidth=1.2)
 
     for bar, val in zip(bars, values):
-        offset = 0.08 if val > 0 else -0.08
+        offset = 0.06 if val > 0 else -0.06
         ax.text(
             val + offset,
             bar.get_y() + bar.get_height() / 2,
             f'{val:+.2f}%',
             va='center',
             ha='left' if val > 0 else 'right',
-            color='#e8eaf0',
-            fontsize=9.5,
-            fontfamily='monospace'
+            color='#e8eaf0', fontsize=9,
         )
 
-    ax.set_xlabel("Price adjustment impact (percentage points)",
-                  color='#8892b0', fontsize=9)
-    ax.set_title(title, color='#ffffff', fontsize=11,
-                 fontweight='bold', pad=12)
-    ax.tick_params(colors='#8892b0', labelsize=9)
+    ax.set_xlabel("Price adjustment impact (pp)",
+                  color='#5a6080', fontsize=8.5)
+    ax.set_title(title, color='#c9a84c',
+                 fontsize=10, fontweight='bold', pad=10)
+    ax.tick_params(colors='#8892b8', labelsize=8.5)
+    for spine in ax.spines.values():
+        spine.set_color('#1a2040')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_color('#1e2640')
-    ax.spines['bottom'].set_color('#1e2640')
-    ax.xaxis.label.set_color('#8892b0')
 
     plt.tight_layout()
     return fig
 
 # ============================================================
+# SIDEBAR
+# ============================================================
+
+with st.sidebar:
+    st.markdown("## Configure Event")
+    st.markdown("---")
+
+    st.markdown("### Venue & Product")
+    venue       = st.selectbox("Venue", VENUES)
+    genre       = st.selectbox("Genre", GENRES)
+    ticket_tier = st.selectbox("Ticket Tier",
+                               list(TIER_BASE_PRICES.keys()), index=1)
+
+    st.markdown("---")
+    st.markdown("### Demand Signals")
+    artist_popularity = st.slider("Artist Popularity", 1, 10, 7)
+    days_to_event     = st.slider("Days to Event", 1, 180, 21)
+
+    st.markdown("---")
+    st.markdown("### Date & Weather")
+    month        = st.slider("Month", 1, 12, 7)
+    day_of_week  = st.slider("Day of Week  (0=Mon · 6=Sun)", 0, 6, 5)
+    temperature_c = st.slider("Temperature (°C)", -5, 32, 15)
+
+    is_weekend     = day_of_week >= 4
+    is_saturday    = day_of_week == 5
+    is_peak_season = month in [2, 7, 8, 12]
+
+    st.markdown("---")
+    st.markdown("### Market Conditions")
+    has_competing_event  = st.checkbox("Competing event tonight?")
+    viral_shock          = st.checkbox("Viral moment active?")
+    transport_disruption = st.checkbox("Transport disruption?")
+
+    st.markdown("---")
+    st.markdown("""
+    <p style='font-family:DM Mono,monospace;font-size:0.7rem;
+    color:#3a4060;line-height:1.6;'>
+    XGBoost · SHAP · Optuna<br>
+    R² = 0.79 · MAE = 3.11%<br>
+    CMA-compliant · ±22% cap<br><br>
+    <a href='https://github.com/aiirveon/ai-event-ticket-pricing'
+    style='color:#c9a84c;'>GitHub →</a>
+    </p>
+    """, unsafe_allow_html=True)
+
+# ============================================================
+# RUN PREDICTION
+# ============================================================
+
+prediction, shap_vals, input_df, base_value = make_prediction(
+    venue, genre, ticket_tier, days_to_event,
+    artist_popularity, temperature_c, is_weekend,
+    is_saturday, has_competing_event, is_peak_season,
+    viral_shock, transport_disruption, month, day_of_week
+)
+
+base_price        = TIER_BASE_PRICES[ticket_tier]
+recommended_price = round(base_price * (1 + prediction / 100) * 2) / 2
+adj_sign          = "+" if prediction >= 0 else ""
+adj_color         = "#c9a84c" if prediction >= 0 else "#e05c5c"
+
+# ============================================================
 # HEADER
 # ============================================================
 
-st.markdown("""
-<div class="main-header">
-    <p class="main-title">🎟️ AI Dynamic Ticket Pricing</p>
-    <p class="main-subtitle">
-        XGBoost + SHAP explainability — UK Live Events Pricing Engine
-        &nbsp;|&nbsp; CMA-compliant &nbsp;|&nbsp; Built by Ogbebor Osaheni
+st.markdown(f"""
+<div style='padding:28px 0 8px 0;'>
+    <p style='font-family:DM Mono,monospace;font-size:0.72rem;
+    color:#c9a84c;letter-spacing:0.15em;text-transform:uppercase;
+    margin:0 0 6px 0;'>AI Product Portfolio · Ogbebor Osaheni</p>
+    <h1 style='font-family:Playfair Display,serif;font-size:2.1rem;
+    font-weight:700;color:#ffffff;margin:0 0 6px 0;
+    letter-spacing:-0.5px;'>Dynamic Ticket Pricing Engine</h1>
+    <p style='font-family:DM Sans,sans-serif;font-size:0.9rem;
+    color:#5a6080;margin:0;'>
+    UK Live Events · XGBoost + SHAP Explainability ·
+    CMA-Compliant Ethics Guardrails
     </p>
 </div>
+<div style='height:1px;background:linear-gradient(
+90deg,#c9a84c 0%,#1a2040 60%);margin:16px 0 28px 0;'></div>
 """, unsafe_allow_html=True)
 
 # ============================================================
-# TOP METRICS ROW
+# METRICS ROW
 # ============================================================
 
-m1, m2, m3, m4 = st.columns(4)
+c1, c2, c3, c4 = st.columns(4)
 
-with m1:
-    st.markdown("""
-    <div class="metric-card">
-        <span class="metric-value">0.79</span>
-        <span class="metric-label">Model R² Score</span>
+def metric_card(col, value, label, sublabel=""):
+    col.markdown(f"""
+    <div style='background:#0d1230;border:1px solid #1a2040;
+    border-radius:10px;padding:18px 20px;'>
+        <p style='font-family:DM Mono,monospace;font-size:0.68rem;
+        color:#5a6080;text-transform:uppercase;letter-spacing:0.1em;
+        margin:0 0 6px 0;'>{label}</p>
+        <p style='font-family:Playfair Display,serif;font-size:1.8rem;
+        font-weight:700;color:#c9a84c;margin:0;line-height:1;'>{value}</p>
+        <p style='font-family:DM Mono,monospace;font-size:0.68rem;
+        color:#3a4060;margin:4px 0 0 0;'>{sublabel}</p>
     </div>
     """, unsafe_allow_html=True)
 
-with m2:
-    st.markdown("""
-    <div class="metric-card">
-        <span class="metric-value">3.11%</span>
-        <span class="metric-label">Avg Prediction Error</span>
-    </div>
-    """, unsafe_allow_html=True)
+metric_card(c1, "0.79", "Model R²", "Price adj. accuracy")
+metric_card(c2, "3.11%", "Mean Abs Error", "Avg prediction error")
+metric_card(c3, "50", "Optuna Trials", "Hyperparameter search")
+metric_card(c4, "±22%", "CMA Cap", "Ethical price boundary")
 
-with m3:
-    st.markdown("""
-    <div class="metric-card">
-        <span class="metric-value">50</span>
-        <span class="metric-label">Optuna Trials Run</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-with m4:
-    st.markdown("""
-    <div class="metric-card">
-        <span class="metric-value">±22%</span>
-        <span class="metric-label">CMA Price Cap</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 
 # ============================================================
-# SIDEBAR — INPUT CONTROLS
+# MAIN — TWO COLUMNS
 # ============================================================
 
-st.sidebar.markdown("## Event Configuration")
-st.sidebar.markdown("---")
+left, right = st.columns([1, 1], gap="large")
 
-st.sidebar.markdown("**Venue & Genre**")
-venue = st.sidebar.selectbox("Venue", VENUES, index=0)
-genre = st.sidebar.selectbox("Genre", GENRES, index=0)
-ticket_tier = st.sidebar.selectbox(
-    "Ticket Tier", list(TIER_BASE_PRICES.keys()), index=1
-)
+# ── LEFT ──
+with left:
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("**Demand Signals**")
-
-artist_popularity = st.sidebar.slider(
-    "Artist Popularity (1-10)", 1, 10, 7,
-    help="1 = unknown act, 10 = global superstar"
-)
-
-days_to_event = st.sidebar.slider(
-    "Days to Event", 1, 180, 21,
-    help="How many days until the event"
-)
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("**Date & Weather**")
-
-month = st.sidebar.slider("Month (1=Jan, 12=Dec)", 1, 12, 7)
-day_of_week = st.sidebar.slider("Day of Week (0=Mon, 6=Sun)", 0, 6, 5)
-temperature_c = st.sidebar.slider("Temperature (°C)", -5, 32, 15)
-
-is_weekend  = day_of_week >= 4
-is_saturday = day_of_week == 5
-is_peak_season = month in [2, 7, 8, 12]
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("**Market Conditions**")
-
-has_competing_event = st.sidebar.checkbox("Competing event same night?", value=False)
-viral_shock         = st.sidebar.checkbox("Viral moment (TikTok/press)?", value=False)
-transport_disruption = st.sidebar.checkbox("Transport disruption?", value=False)
-
-# ============================================================
-# MAIN CONTENT — TWO COLUMNS
-# ============================================================
-
-left_col, right_col = st.columns([1, 1], gap="large")
-
-# --- LEFT: RECOMMENDATION ---
-with left_col:
-    st.markdown('<p class="section-header">Price Recommendation</p>',
-                unsafe_allow_html=True)
-
-    base_price = TIER_BASE_PRICES[ticket_tier]
-
-    prediction, shap_vals, input_df, base_value = make_prediction(
-        venue, genre, ticket_tier, days_to_event,
-        artist_popularity, temperature_c, is_weekend,
-        is_saturday, has_competing_event, is_peak_season,
-        viral_shock, transport_disruption, month, day_of_week
-    )
-
-    recommended_price = base_price * (1 + prediction / 100)
-    recommended_price = round(recommended_price * 2) / 2  # Round to 50p
-
-    box_class   = "rec-box-positive" if prediction >= 0 else "rec-box-negative"
-    adj_class   = "rec-adjustment-positive" if prediction >= 0 else "rec-adjustment-negative"
-    adj_symbol  = "+" if prediction >= 0 else ""
-
+    # Hero price card
     st.markdown(f"""
-    <div class="{box_class}">
-        <span style="color:#8892b0; font-size:0.8rem;
-              text-transform:uppercase; letter-spacing:1px;
-              font-family:monospace;">Recommended Price</span>
-        <span class="rec-price">£{recommended_price:.2f}</span>
-        <span class="{adj_class}">{adj_symbol}{prediction:.1f}% from base (£{base_price:.2f})</span>
-        <span style="color:#8892b0; font-size:0.78rem;
-              font-family:monospace; margin-top:8px; display:block;">
-            {ticket_tier} &nbsp;·&nbsp; {venue.split(",")[0]}
-        </span>
+    <div style='background:linear-gradient(135deg,#0d1230 0%,#080c1f 100%);
+    border:1px solid #c9a84c;border-radius:14px;
+    padding:36px 32px;text-align:center;margin-bottom:20px;'>
+
+        <p style='font-family:DM Mono,monospace;font-size:0.68rem;
+        color:#5a6080;text-transform:uppercase;letter-spacing:0.15em;
+        margin:0 0 12px 0;'>Recommended Price</p>
+
+        <p style='font-family:Playfair Display,serif;font-size:3.6rem;
+        font-weight:700;color:#ffffff;margin:0;line-height:1;'>
+        £{recommended_price:.2f}</p>
+
+        <p style='font-family:DM Mono,monospace;font-size:1.1rem;
+        color:{adj_color};margin:10px 0 0 0;font-weight:500;'>
+        {adj_sign}{prediction:.1f}% from base price of £{base_price:.2f}</p>
+
+        <div style='height:1px;background:#1a2040;margin:16px 0;'></div>
+
+        <p style='font-family:DM Mono,monospace;font-size:0.72rem;
+        color:#3a4060;margin:0;'>
+        {ticket_tier} &nbsp;·&nbsp; {venue.split(",")[0]}
+        &nbsp;·&nbsp; {genre}
+        </p>
     </div>
     """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
 
     # Ethics panel
-    st.markdown('<p class="section-header">Ethics & Compliance</p>',
-                unsafe_allow_html=True)
+    st.markdown("""
+    <p style='font-family:DM Mono,monospace;font-size:0.72rem;
+    color:#c9a84c;text-transform:uppercase;letter-spacing:0.12em;
+    margin:0 0 12px 0;'>Ethics & Compliance</p>
+    """, unsafe_allow_html=True)
 
-    MAX_INCREASE = 22.0
-    MAX_DECREASE = -28.0
+    def ethics_row(passed, text):
+        icon  = "✓" if passed else "⚠"
+        bg    = "#05180f" if passed else "#1f1000"
+        border= "#1a5c30" if passed else "#7a4500"
+        color = "#4ade80" if passed else "#fbbf24"
+        st.markdown(f"""
+        <div style='background:{bg};border:1px solid {border};
+        border-radius:8px;padding:10px 14px;margin-bottom:8px;
+        font-family:DM Mono,monospace;font-size:0.78rem;color:{color};'>
+        {icon} &nbsp; {text}
+        </div>
+        """, unsafe_allow_html=True)
 
-    if prediction <= MAX_INCREASE:
-        st.markdown(
-            f'<span class="ethics-pass">✓ CMA Cap Compliant — {prediction:.1f}% is within +{MAX_INCREASE}% limit</span>',
-            unsafe_allow_html=True
-        )
-    else:
-        st.markdown(
-            f'<span class="ethics-warn">⚠ Near CMA Cap — {prediction:.1f}% approaches +{MAX_INCREASE}% limit</span>',
-            unsafe_allow_html=True
-        )
+    ethics_row(prediction <= 22.0,
+               f"CMA Cap — {prediction:.1f}% within +22% limit")
+    ethics_row(prediction >= -28.0,
+               "Floor compliant — above minimum threshold")
+    ethics_row(not viral_shock,
+               "No surge pricing — stable demand conditions"
+               if not viral_shock else
+               "Viral demand spike — human review recommended")
 
-    if prediction >= MAX_DECREASE:
-        st.markdown(
-            '<span class="ethics-pass">✓ Floor Compliant — above minimum discount threshold</span>',
-            unsafe_allow_html=True
-        )
+    # Plain English
+    st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+    st.markdown("""
+    <p style='font-family:DM Mono,monospace;font-size:0.72rem;
+    color:#c9a84c;text-transform:uppercase;letter-spacing:0.12em;
+    margin:0 0 12px 0;'>Plain English Explanation</p>
+    """, unsafe_allow_html=True)
 
-    if not viral_shock:
-        st.markdown(
-            '<span class="ethics-pass">✓ No surge pricing detected — stable demand conditions</span>',
-            unsafe_allow_html=True
-        )
-    else:
-        st.markdown(
-            '<span class="ethics-warn">⚠ Viral demand spike detected — human review recommended</span>',
-            unsafe_allow_html=True
-        )
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # Plain English explanation
-    st.markdown('<p class="section-header">Plain English Explanation</p>',
-                unsafe_allow_html=True)
-
-    feature_impacts = list(zip(FEATURES, shap_vals))
-    feature_impacts.sort(key=lambda x: abs(x[1]), reverse=True)
-    top3 = feature_impacts[:3]
-
-    explanation_parts = []
-    for feat, val in top3:
+    impacts = sorted(zip(FEATURES, shap_vals),
+                     key=lambda x: abs(x[1]), reverse=True)[:3]
+    parts = []
+    for feat, val in impacts:
         direction = "increased" if val > 0 else "decreased"
-        feat_readable = feat.replace("_", " ")
-        explanation_parts.append(
-            f"{feat_readable} {direction} the price by {abs(val):.1f}%"
+        parts.append(
+            f"{feat.replace('_',' ')} {direction} "
+            f"the price by {abs(val):.1f}pp"
         )
 
-    explanation = f"The model recommends £{recommended_price:.2f} " \
-                  f"({adj_symbol}{prediction:.1f}% adjustment). " \
-                  f"Primarily because: {explanation_parts[0]}. " \
-                  f"Additionally, {explanation_parts[1]}. " \
-                  f"And {explanation_parts[2]}."
+    explanation = (
+        f"Recommending £{recommended_price:.2f} "
+        f"({adj_sign}{prediction:.1f}% adjustment). "
+        f"{parts[0].capitalize()}. "
+        f"{parts[1].capitalize()}. "
+        f"{parts[2].capitalize()}."
+    )
 
-    st.markdown(f'<div class="explain-text">{explanation}</div>',
-                unsafe_allow_html=True)
+    st.markdown(f"""
+    <div style='background:#080c1f;border-left:3px solid #c9a84c;
+    border-radius:0 8px 8px 0;padding:14px 18px;
+    font-family:DM Mono,monospace;font-size:0.82rem;
+    color:#8892b8;line-height:1.7;'>
+    {explanation}
+    </div>
+    """, unsafe_allow_html=True)
 
-# --- RIGHT: SHAP CHART ---
-with right_col:
-    st.markdown('<p class="section-header">SHAP Explanation — Why This Price?</p>',
-                unsafe_allow_html=True)
+# ── RIGHT ──
+with right:
+    st.markdown("""
+    <p style='font-family:DM Mono,monospace;font-size:0.72rem;
+    color:#c9a84c;text-transform:uppercase;letter-spacing:0.12em;
+    margin:0 0 12px 0;'>SHAP Explanation — Why This Price?</p>
+    """, unsafe_allow_html=True)
 
-    fig = plot_shap_waterfall(
-        shap_vals,
-        FEATURES,
-        title=f"Price drivers — {ticket_tier} at {venue.split(',')[0]}"
+    fig = plot_shap(
+        shap_vals, FEATURES,
+        title=f"Price drivers — {ticket_tier} · {venue.split(',')[0]}"
     )
     st.pyplot(fig, use_container_width=True)
     plt.close()
 
     st.markdown("""
-    <div class="explain-text">
-        Green bars pushed the price UP.
-        Red bars pushed the price DOWN.
-        Bar length = magnitude of impact in percentage points.
-        Every recommendation is fully auditable.
+    <div style='background:#080c1f;border-left:3px solid #1a2040;
+    border-radius:0 8px 8px 0;padding:12px 16px;margin-top:12px;
+    font-family:DM Mono,monospace;font-size:0.76rem;
+    color:#3a4060;line-height:1.7;'>
+    Gold bars pushed the price UP &nbsp;·&nbsp;
+    Red bars pushed the price DOWN<br>
+    Bar length = magnitude in percentage points &nbsp;·&nbsp;
+    Every recommendation is fully auditable
     </div>
     """, unsafe_allow_html=True)
 
 # ============================================================
-# MARKET OVERVIEW SECTION
+# MARKET OVERVIEW
 # ============================================================
 
-st.markdown("---")
-st.markdown('<p class="section-header">Market Overview — Price Adjustment Distribution</p>',
-            unsafe_allow_html=True)
+st.markdown("""
+<div style='height:1px;background:linear-gradient(
+90deg,#c9a84c 0%,#1a2040 60%);margin:36px 0 28px 0;'></div>
+<p style='font-family:Playfair Display,serif;font-size:1.3rem;
+font-weight:600;color:#ffffff;margin:0 0 20px 0;'>
+Market Overview
+</p>
+""", unsafe_allow_html=True)
 
-chart1, chart2 = st.columns(2)
+mc1, mc2 = st.columns(2)
 
-with chart1:
-    st.markdown("**Average Adjustment by Venue**")
-    venue_avg = df_data.groupby("venue")["price_adjustment_pct"].mean().sort_values()
-    venue_names_short = [v.split(",")[0] for v in venue_avg.index]
+def market_fig():
+    fig, ax = plt.subplots(figsize=(7, 3.8))
+    fig.patch.set_facecolor('#0d1230')
+    ax.set_facecolor('#0d1230')
+    for spine in ax.spines.values():
+        spine.set_color('#1a2040')
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.tick_params(colors='#8892b8', labelsize=8)
+    return fig, ax
 
-    fig2, ax2 = plt.subplots(figsize=(7, 4))
-    fig2.patch.set_facecolor('#111627')
-    ax2.set_facecolor('#111627')
+with mc1:
+    st.markdown("""
+    <p style='font-family:DM Mono,monospace;font-size:0.72rem;
+    color:#5a6080;text-transform:uppercase;letter-spacing:0.1em;
+    margin:0 0 10px 0;'>Avg Adjustment by Venue</p>
+    """, unsafe_allow_html=True)
 
-    colors2 = ['#3d5af1' if v >= 0 else '#f87171' for v in venue_avg.values]
-    ax2.barh(venue_names_short, venue_avg.values, color=colors2, height=0.6)
-    ax2.axvline(x=0, color='#8892b0', linewidth=0.8)
-    ax2.set_xlabel("Avg price adjustment (%)", color='#8892b0', fontsize=9)
-    ax2.tick_params(colors='#8892b0', labelsize=8.5)
-    ax2.spines['top'].set_visible(False)
-    ax2.spines['right'].set_visible(False)
-    ax2.spines['left'].set_color('#1e2640')
-    ax2.spines['bottom'].set_color('#1e2640')
+    venue_avg = (df_data.groupby("venue")["price_adjustment_pct"]
+                 .mean().sort_values())
+    short     = [v.split(",")[0] for v in venue_avg.index]
+
+    fig2, ax2 = market_fig()
+    colors2   = ['#c9a84c' if v >= 15 else '#3d5af1'
+                 for v in venue_avg.values]
+    ax2.barh(short, venue_avg.values, color=colors2, height=0.55)
+    ax2.axvline(x=venue_avg.mean(), color='#c9a84c',
+                linewidth=1, linestyle='--', alpha=0.5)
+    ax2.set_xlabel("Avg price adjustment (%)",
+                   color='#5a6080', fontsize=8)
     plt.tight_layout()
     st.pyplot(fig2, use_container_width=True)
     plt.close()
 
-with chart2:
-    st.markdown("**Adjustment Distribution by Artist Popularity**")
-    pop_avg = df_data.groupby("artist_popularity")["price_adjustment_pct"].mean()
+with mc2:
+    st.markdown("""
+    <p style='font-family:DM Mono,monospace;font-size:0.72rem;
+    color:#5a6080;text-transform:uppercase;letter-spacing:0.1em;
+    margin:0 0 10px 0;'>Price Adjustment vs Artist Popularity</p>
+    """, unsafe_allow_html=True)
 
-    fig3, ax3 = plt.subplots(figsize=(7, 4))
-    fig3.patch.set_facecolor('#111627')
-    ax3.set_facecolor('#111627')
+    pop_avg = (df_data.groupby("artist_popularity")
+               ["price_adjustment_pct"].mean())
 
+    fig3, ax3 = market_fig()
     ax3.plot(pop_avg.index, pop_avg.values,
-             color='#3d5af1', linewidth=2.5, marker='o',
-             markersize=6, markerfacecolor='#ffffff')
+             color='#c9a84c', linewidth=2.5,
+             marker='o', markersize=5,
+             markerfacecolor='#06091a',
+             markeredgecolor='#c9a84c',
+             markeredgewidth=2)
     ax3.fill_between(pop_avg.index, pop_avg.values,
-                     alpha=0.15, color='#3d5af1')
-    ax3.set_xlabel("Artist Popularity Score", color='#8892b0', fontsize=9)
-    ax3.set_ylabel("Avg Adjustment (%)", color='#8892b0', fontsize=9)
-    ax3.tick_params(colors='#8892b0', labelsize=8.5)
-    ax3.spines['top'].set_visible(False)
-    ax3.spines['right'].set_visible(False)
-    ax3.spines['left'].set_color('#1e2640')
-    ax3.spines['bottom'].set_color('#1e2640')
+                     alpha=0.08, color='#c9a84c')
+    ax3.set_xlabel("Artist Popularity (1–10)",
+                   color='#5a6080', fontsize=8)
+    ax3.set_ylabel("Avg Adjustment (%)",
+                   color='#5a6080', fontsize=8)
     plt.tight_layout()
     st.pyplot(fig3, use_container_width=True)
     plt.close()
@@ -675,16 +563,22 @@ with chart2:
 # FOOTER
 # ============================================================
 
-st.markdown("---")
 st.markdown("""
-<div style="text-align:center; color:#8892b0; font-size:0.8rem;
-     font-family:monospace; padding:16px 0;">
+<div style='height:1px;background:#1a2040;margin:40px 0 20px 0;'></div>
+<div style='display:flex;justify-content:space-between;
+align-items:center;padding:0 0 32px 0;'>
+    <p style='font-family:DM Mono,monospace;font-size:0.72rem;
+    color:#3a4060;margin:0;'>
     Built by Ogbebor Osaheni &nbsp;·&nbsp;
     XGBoost + SHAP + Optuna &nbsp;·&nbsp;
-    CMA-compliant dynamic pricing &nbsp;·&nbsp;
-    <a href="https://github.com/aiirveon" style="color:#3d5af1;">GitHub</a>
-    &nbsp;·&nbsp;
-    <a href="https://www.linkedin.com/in/osaheni-o-94565421a/"
-       style="color:#3d5af1;">LinkedIn</a>
+    CMA-compliant dynamic pricing
+    </p>
+    <p style='font-family:DM Mono,monospace;font-size:0.72rem;margin:0;'>
+    <a href='https://github.com/aiirveon/ai-event-ticket-pricing'
+    style='color:#c9a84c;text-decoration:none;'>GitHub</a>
+    &nbsp;&nbsp;
+    <a href='https://www.linkedin.com/in/osaheni-o-94565421a/'
+    style='color:#c9a84c;text-decoration:none;'>LinkedIn</a>
+    </p>
 </div>
 """, unsafe_allow_html=True)
