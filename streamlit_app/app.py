@@ -310,23 +310,23 @@ adj_color         = "#c9a84c" if prediction >= 0 else "#e05c5c"
 # HEADER
 # ============================================================
 
-st.markdown(f"""
-<div style='padding:28px 0 8px 0;'>
+# Hero price card using Streamlit native components
+    st.markdown(f"""
+    <div style='background:linear-gradient(135deg,#0d1230 0%,#080c1f 100%);
+    border:1px solid #c9a84c;border-radius:14px;
+    padding:36px 32px;text-align:center;margin-bottom:20px;'>
+    <p style='font-family:DM Mono,monospace;font-size:0.68rem;
+    color:#5a6080;text-transform:uppercase;letter-spacing:0.15em;
+    margin:0 0 12px 0;'>Recommended Price</p>
+    <p style='font-family:Playfair Display,serif;font-size:3.6rem;
+    font-weight:700;color:#ffffff;margin:0;line-height:1;'>£{recommended_price:.2f}</p>
+    <p style='font-family:DM Mono,monospace;font-size:1.1rem;
+    color:{adj_color};margin:10px 0 0 0;font-weight:500;'>{adj_sign}{prediction:.1f}% from base price of £{base_price:.2f}</p>
+    <div style='height:1px;background:#1a2040;margin:16px 0;'></div>
     <p style='font-family:DM Mono,monospace;font-size:0.72rem;
-    color:#c9a84c;letter-spacing:0.15em;text-transform:uppercase;
-    margin:0 0 6px 0;'>AI Product Portfolio · Ogbebor Osaheni</p>
-    <h1 style='font-family:Playfair Display,serif;font-size:2.1rem;
-    font-weight:700;color:#ffffff;margin:0 0 6px 0;
-    letter-spacing:-0.5px;'>Dynamic Ticket Pricing Engine</h1>
-    <p style='font-family:DM Sans,sans-serif;font-size:0.9rem;
-    color:#5a6080;margin:0;'>
-    UK Live Events · XGBoost + SHAP Explainability ·
-    CMA-Compliant Ethics Guardrails
-    </p>
-</div>
-<div style='height:1px;background:linear-gradient(
-90deg,#c9a84c 0%,#1a2040 60%);margin:16px 0 28px 0;'></div>
-""", unsafe_allow_html=True)
+    color:#3a4060;margin:0;'>{ticket_tier} &nbsp;·&nbsp; {venue.split(",")[0]} &nbsp;·&nbsp; {genre}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ============================================================
 # METRICS ROW
