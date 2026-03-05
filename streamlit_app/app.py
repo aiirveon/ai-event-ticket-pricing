@@ -19,7 +19,7 @@ st.set_page_config(
     page_title="AI Ticket Pricing — Ogbebor Osaheni",
     page_icon="🎟",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ============================================================
@@ -33,62 +33,51 @@ st.markdown("""
 html, body, [class*="css"] { font-family: 'DM Sans', sans-serif; }
 .stApp { background-color: #06091a; }
 
-[data-testid="stSidebar"] {
-    background-color: #080c1f;
-    border-right: 1px solid #1a2040;
+/* ── Hide sidebar entirely ── */
+[data-testid="stSidebar"] { display: none !important; }
+[data-testid="collapsedControl"] { display: none !important; }
+
+/* ── Force all text white ── */
+p, span, label, div, h1, h2, h3, h4, li,
+.stMarkdown, .stText {
+    color: #ffffff !important;
 }
-[data-testid="stSidebar"] label,
-[data-testid="stSidebar"] .stMarkdown p {
-    color: #8892b8 !important;
-    font-size: 0.78rem !important;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-family: 'DM Mono', monospace !important;
-}
-[data-testid="stSidebar"] h2,
-[data-testid="stSidebar"] h3 {
-    color: #c9a84c !important;
-    font-family: 'Playfair Display', serif !important;
-    font-size: 1.0rem !important;
-    border-bottom: 1px solid #1a2040;
-    padding-bottom: 8px;
-    margin-bottom: 16px;
-}
+
+/* ── Slider ── */
+[data-testid="stSlider"] label { color: #ffffff !important; }
+[data-testid="stSlider"] p { color: #ffffff !important; }
 [data-testid="stSlider"] > div > div > div > div {
     background: #c9a84c !important;
 }
+
+/* ── Selectbox ── */
+[data-testid="stSelectbox"] label { color: #ffffff !important; }
 [data-testid="stSelectbox"] > div > div {
     background-color: #0d1230 !important;
-    border: 1px solid #1a2040 !important;
-    color: #e8eaf0 !important;
+    border: 1px solid #2a3060 !important;
+    color: #ffffff !important;
     border-radius: 8px !important;
 }
-[data-testid="stCheckbox"] label {
-    color: #8892b8 !important;
-    font-size: 0.82rem !important;
-}
 
-/* ── Mobile expander styling ── */
+/* ── Checkbox ── */
+[data-testid="stCheckbox"] label { color: #ffffff !important; }
+[data-testid="stCheckbox"] p { color: #ffffff !important; }
+
+/* ── Expander ── */
 [data-testid="stExpander"] {
     background-color: #0d1230 !important;
-    border: 1px solid #1a2040 !important;
-    border-radius: 10px !important;
-    margin-bottom: 12px !important;
+    border: 1px solid #2a3060 !important;
+    border-radius: 12px !important;
+    margin-bottom: 24px !important;
 }
-[data-testid="stExpander"] summary {
+[data-testid="stExpander"] summary p,
+[data-testid="stExpander"] summary span,
+[data-testid="stExpander"] summary svg {
     color: #c9a84c !important;
-    font-family: 'DM Mono', monospace !important;
-    font-size: 0.82rem !important;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    fill: #c9a84c !important;
 }
-[data-testid="stExpander"] label {
-    color: #8892b8 !important;
-    font-size: 0.78rem !important;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    font-family: 'DM Mono', monospace !important;
-}
+[data-testid="stExpander"] label { color: #ffffff !important; }
+[data-testid="stExpander"] p { color: #ffffff !important; }
 
 hr { border-color: #1a2040 !important; margin: 1.5rem 0 !important; }
 #MainMenu, footer, header { visibility: hidden; }
@@ -149,43 +138,6 @@ TIER_BASE_PRICES = {
     "Premium (Seated)":   125.0,
     "VIP Package":        210.0,
 }
-
-# ============================================================
-# CONTROLS — shared function used by both sidebar & expander
-# ============================================================
-
-def render_controls(key_prefix=""):
-    venue = st.selectbox("Venue", VENUES, key=f"{key_prefix}venue")
-    genre = st.selectbox("Genre", GENRES, key=f"{key_prefix}genre")
-    ticket_tier = st.selectbox(
-        "Ticket Tier", list(TIER_BASE_PRICES.keys()), index=1,
-        key=f"{key_prefix}tier"
-    )
-    artist_popularity = st.slider(
-        "Artist Popularity", 1, 10, 7, key=f"{key_prefix}pop"
-    )
-    days_to_event = st.slider(
-        "Days to Event", 1, 180, 21, key=f"{key_prefix}days"
-    )
-    month = st.slider("Month", 1, 12, 7, key=f"{key_prefix}month")
-    day_of_week = st.slider(
-        "Day of Week (0=Mon · 6=Sun)", 0, 6, 5, key=f"{key_prefix}dow"
-    )
-    temperature_c = st.slider(
-        "Temperature (°C)", -5, 32, 15, key=f"{key_prefix}temp"
-    )
-    has_competing_event = st.checkbox(
-        "Competing event tonight?", key=f"{key_prefix}comp"
-    )
-    viral_shock = st.checkbox(
-        "Viral moment active?", key=f"{key_prefix}viral"
-    )
-    transport_disruption = st.checkbox(
-        "Transport disruption?", key=f"{key_prefix}trans"
-    )
-    return (venue, genre, ticket_tier, artist_popularity, days_to_event,
-            month, day_of_week, temperature_c,
-            has_competing_event, viral_shock, transport_disruption)
 
 # ============================================================
 # PREDICTION
@@ -260,37 +212,15 @@ def plot_shap(shap_values, feature_names, title=""):
             color='#e8eaf0', fontsize=9,
         )
 
-    ax.set_xlabel("Price adjustment impact (pp)", color='#5a6080', fontsize=8.5)
+    ax.set_xlabel("Price adjustment impact (pp)", color='#ffffff', fontsize=8.5)
     ax.set_title(title, color='#c9a84c', fontsize=10, fontweight='bold', pad=10)
-    ax.tick_params(colors='#8892b8', labelsize=8.5)
+    ax.tick_params(colors='#ffffff', labelsize=8.5)
     for spine in ax.spines.values():
         spine.set_color('#1a2040')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     plt.tight_layout()
     return fig
-
-# ============================================================
-# SIDEBAR (desktop)
-# ============================================================
-
-with st.sidebar:
-    st.markdown("## Configure Event")
-    st.markdown("---")
-    st.markdown("### Venue & Product")
-    (s_venue, s_genre, s_tier, s_pop, s_days,
-     s_month, s_dow, s_temp,
-     s_comp, s_viral, s_trans) = render_controls("sb_")
-
-    st.markdown("---")
-    st.markdown("""
-<p style='font-family:DM Mono,monospace;font-size:0.7rem;color:#3a4060;line-height:1.6;'>
-XGBoost · SHAP · Optuna<br>
-R² = 0.79 · MAE = 3.11%<br>
-CMA-compliant · ±22% cap<br><br>
-<a href='https://github.com/aiirveon/ai-event-ticket-pricing' style='color:#c9a84c;'>GitHub →</a>
-</p>
-""", unsafe_allow_html=True)
 
 # ============================================================
 # HEADER
@@ -304,7 +234,7 @@ AI Product Portfolio · Ogbebor Osaheni</p>
 <h1 style='font-family:Playfair Display,serif;font-size:2.1rem;
 font-weight:700;color:#ffffff;margin:0 0 6px 0;letter-spacing:-0.5px;'>
 Dynamic Ticket Pricing Engine</h1>
-<p style='font-family:DM Sans,sans-serif;font-size:0.9rem;color:#5a6080;margin:0;'>
+<p style='font-family:DM Sans,sans-serif;font-size:0.9rem;color:#ffffff;margin:0;opacity:0.55;'>
 UK Live Events · XGBoost + SHAP Explainability · CMA-Compliant Ethics Guardrails</p>
 </div>
 <div style='height:1px;background:linear-gradient(90deg,#c9a84c 0%,#1a2040 60%);
@@ -312,67 +242,35 @@ margin:16px 0 28px 0;'></div>
 """, unsafe_allow_html=True)
 
 # ============================================================
-# MOBILE CONTROLS (visible on small screens via expander)
+# EXPANDER CONTROLS — 3 columns, no sidebar
 # ============================================================
 
-with st.expander("⚙️  Configure Event — tap to open", expanded=False):
-    st.markdown("""
-<p style='font-family:DM Mono,monospace;font-size:0.72rem;color:#5a6080;
-margin:0 0 12px 0;'>Use these controls on mobile. On desktop, use the sidebar on the left.</p>
-""", unsafe_allow_html=True)
-    (m_venue, m_genre, m_tier, m_pop, m_days,
-     m_month, m_dow, m_temp,
-     m_comp, m_viral, m_trans) = render_controls("mb_")
+with st.expander("⚙️  Configure Event", expanded=True):
+    col_a, col_b, col_c = st.columns(3)
 
-# ============================================================
-# DECIDE WHICH CONTROLS TO USE
-# — sidebar values are default; if mobile expander was
-#   interacted with its values will differ from defaults,
-#   so we just always expose both and let the user pick.
-#   Streamlit has no reliable mobile detection, so we use
-#   the sidebar values as primary (they work on desktop)
-#   and note mobile users should use the expander.
-# ============================================================
+    with col_a:
+        st.markdown("<p style='font-family:DM Mono,monospace;font-size:0.72rem;color:#c9a84c !important;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px 0;'>Venue & Product</p>", unsafe_allow_html=True)
+        venue       = st.selectbox("Venue", VENUES)
+        genre       = st.selectbox("Genre", GENRES)
+        ticket_tier = st.selectbox("Ticket Tier", list(TIER_BASE_PRICES.keys()), index=1)
 
-venue         = s_venue
-genre         = s_genre
-ticket_tier   = s_tier
-artist_popularity  = s_pop
-days_to_event      = s_days
-month              = s_month
-day_of_week        = s_dow
-temperature_c      = s_temp
-has_competing_event = s_comp
-viral_shock        = s_viral
-transport_disruption = s_trans
+    with col_b:
+        st.markdown("<p style='font-family:DM Mono,monospace;font-size:0.72rem;color:#c9a84c !important;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px 0;'>Demand Signals</p>", unsafe_allow_html=True)
+        artist_popularity = st.slider("Artist Popularity", 1, 10, 7)
+        days_to_event     = st.slider("Days to Event", 1, 180, 21)
+        month             = st.slider("Month", 1, 12, 7)
+        day_of_week       = st.slider("Day of Week (0=Mon · 6=Sun)", 0, 6, 5)
+        temperature_c     = st.slider("Temperature (°C)", -5, 32, 15)
+
+    with col_c:
+        st.markdown("<p style='font-family:DM Mono,monospace;font-size:0.72rem;color:#c9a84c !important;text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px 0;'>Market Conditions</p>", unsafe_allow_html=True)
+        has_competing_event  = st.checkbox("Competing event tonight?")
+        viral_shock          = st.checkbox("Viral moment active?")
+        transport_disruption = st.checkbox("Transport disruption?")
 
 is_weekend     = day_of_week >= 4
 is_saturday    = day_of_week == 5
 is_peak_season = month in [2, 7, 8, 12]
-
-# ============================================================
-# METRICS ROW
-# ============================================================
-
-c1, c2, c3, c4 = st.columns(4)
-
-def metric_card(col, value, label, sublabel=""):
-    col.markdown(f"""
-<div style='background:#0d1230;border:1px solid #1a2040;border-radius:10px;padding:18px 20px;'>
-<p style='font-family:DM Mono,monospace;font-size:0.68rem;color:#5a6080;
-text-transform:uppercase;letter-spacing:0.1em;margin:0 0 6px 0;'>{label}</p>
-<p style='font-family:Playfair Display,serif;font-size:1.8rem;
-font-weight:700;color:#c9a84c;margin:0;line-height:1;'>{value}</p>
-<p style='font-family:DM Mono,monospace;font-size:0.68rem;color:#3a4060;margin:4px 0 0 0;'>{sublabel}</p>
-</div>
-""", unsafe_allow_html=True)
-
-metric_card(c1, "0.79",  "Model R²",       "Price adj. accuracy")
-metric_card(c2, "3.11%", "Mean Abs Error",  "Avg prediction error")
-metric_card(c3, "50",    "Optuna Trials",   "Hyperparameter search")
-metric_card(c4, "±22%",  "CMA Cap",         "Ethical price boundary")
-
-st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
 
 # ============================================================
 # RUN PREDICTION
@@ -391,26 +289,49 @@ adj_sign          = "+" if prediction >= 0 else ""
 adj_color         = "#c9a84c" if prediction >= 0 else "#e05c5c"
 
 # ============================================================
+# METRICS ROW
+# ============================================================
+
+c1, c2, c3, c4 = st.columns(4)
+
+def metric_card(col, value, label, sublabel=""):
+    col.markdown(f"""
+<div style='background:#0d1230;border:1px solid #1a2040;border-radius:10px;padding:18px 20px;'>
+<p style='font-family:DM Mono,monospace;font-size:0.68rem;color:#ffffff;opacity:0.45;
+text-transform:uppercase;letter-spacing:0.1em;margin:0 0 6px 0;'>{label}</p>
+<p style='font-family:Playfair Display,serif;font-size:1.8rem;
+font-weight:700;color:#c9a84c;margin:0;line-height:1;'>{value}</p>
+<p style='font-family:DM Mono,monospace;font-size:0.68rem;color:#ffffff;opacity:0.3;margin:4px 0 0 0;'>{sublabel}</p>
+</div>
+""", unsafe_allow_html=True)
+
+metric_card(c1, "0.79",  "Model R²",       "Price adj. accuracy")
+metric_card(c2, "3.11%", "Mean Abs Error",  "Avg prediction error")
+metric_card(c3, "50",    "Optuna Trials",   "Hyperparameter search")
+metric_card(c4, "±22%",  "CMA Cap",         "Ethical price boundary")
+
+st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+
+# ============================================================
 # MAIN — TWO COLUMNS
 # ============================================================
 
 left, right = st.columns([1, 1], gap="large")
 
-# ── LEFT COLUMN ──
 with left:
 
     st.markdown(f"""
 <div style='background:linear-gradient(135deg,#0d1230 0%,#080c1f 100%);
 border:1px solid #c9a84c;border-radius:14px;padding:36px 32px;
 text-align:center;margin-bottom:20px;'>
-<p style='font-family:DM Mono,monospace;font-size:0.68rem;color:#5a6080;
+<p style='font-family:DM Mono,monospace;font-size:0.68rem;color:#ffffff;opacity:0.35;
 text-transform:uppercase;letter-spacing:0.15em;margin:0 0 12px 0;'>Recommended Price</p>
 <p style='font-family:Playfair Display,serif;font-size:3.6rem;
 font-weight:700;color:#ffffff;margin:0;line-height:1;'>£{recommended_price:.2f}</p>
 <p style='font-family:DM Mono,monospace;font-size:1.1rem;
 color:{adj_color};margin:10px 0 0 0;font-weight:500;'>{adj_sign}{prediction:.1f}% from base price of £{base_price:.2f}</p>
 <div style='height:1px;background:#1a2040;margin:16px 0;'></div>
-<p style='font-family:DM Mono,monospace;font-size:0.72rem;color:#3a4060;margin:0;'>
+<p style='font-family:DM Mono,monospace;font-size:0.72rem;color:#ffffff;opacity:0.25;margin:0;'>
 {ticket_tier} &nbsp;·&nbsp; {venue.split(",")[0]} &nbsp;·&nbsp; {genre}</p>
 </div>
 """, unsafe_allow_html=True)
@@ -465,12 +386,11 @@ text-transform:uppercase;letter-spacing:0.12em;margin:0 0 12px 0;'>Plain English
     st.markdown(f"""
 <div style='background:#080c1f;border-left:3px solid #c9a84c;
 border-radius:0 8px 8px 0;padding:14px 18px;
-font-family:DM Mono,monospace;font-size:0.82rem;color:#8892b8;line-height:1.7;'>
+font-family:DM Mono,monospace;font-size:0.82rem;color:#ffffff;line-height:1.7;'>
 {explanation}
 </div>
 """, unsafe_allow_html=True)
 
-# ── RIGHT COLUMN ──
 with right:
 
     st.markdown("""
@@ -489,7 +409,7 @@ SHAP Explanation — Why This Price?</p>
     st.markdown("""
 <div style='background:#080c1f;border-left:3px solid #1a2040;
 border-radius:0 8px 8px 0;padding:12px 16px;margin-top:12px;
-font-family:DM Mono,monospace;font-size:0.76rem;color:#3a4060;line-height:1.7;'>
+font-family:DM Mono,monospace;font-size:0.76rem;color:#ffffff;opacity:0.4;line-height:1.7;'>
 Gold bars pushed the price UP &nbsp;·&nbsp; Red bars pushed the price DOWN<br>
 Bar length = magnitude in percentage points &nbsp;·&nbsp; Every recommendation is fully auditable
 </div>
@@ -516,12 +436,12 @@ def market_fig():
         spine.set_color('#1a2040')
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    ax.tick_params(colors='#8892b8', labelsize=8)
+    ax.tick_params(colors='#ffffff', labelsize=8)
     return fig, ax
 
 with mc1:
     st.markdown("""
-<p style='font-family:DM Mono,monospace;font-size:0.72rem;color:#5a6080;
+<p style='font-family:DM Mono,monospace;font-size:0.72rem;color:#ffffff;opacity:0.45;
 text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px 0;'>Avg Adjustment by Venue</p>
 """, unsafe_allow_html=True)
 
@@ -533,14 +453,14 @@ text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px 0;'>Avg Adjustment
     ax2.barh(short, venue_avg.values, color=colors2, height=0.55)
     ax2.axvline(x=venue_avg.mean(), color='#c9a84c',
                 linewidth=1, linestyle='--', alpha=0.5)
-    ax2.set_xlabel("Avg price adjustment (%)", color='#5a6080', fontsize=8)
+    ax2.set_xlabel("Avg price adjustment (%)", color='#ffffff', fontsize=8)
     plt.tight_layout()
     st.pyplot(fig2, use_container_width=True)
     plt.close()
 
 with mc2:
     st.markdown("""
-<p style='font-family:DM Mono,monospace;font-size:0.72rem;color:#5a6080;
+<p style='font-family:DM Mono,monospace;font-size:0.72rem;color:#ffffff;opacity:0.45;
 text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px 0;'>Price Adjustment vs Artist Popularity</p>
 """, unsafe_allow_html=True)
 
@@ -554,8 +474,8 @@ text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px 0;'>Price Adjustme
              markeredgecolor='#c9a84c',
              markeredgewidth=2)
     ax3.fill_between(pop_avg.index, pop_avg.values, alpha=0.08, color='#c9a84c')
-    ax3.set_xlabel("Artist Popularity (1–10)", color='#5a6080', fontsize=8)
-    ax3.set_ylabel("Avg Adjustment (%)", color='#5a6080', fontsize=8)
+    ax3.set_xlabel("Artist Popularity (1–10)", color='#ffffff', fontsize=8)
+    ax3.set_ylabel("Avg Adjustment (%)", color='#ffffff', fontsize=8)
     plt.tight_layout()
     st.pyplot(fig3, use_container_width=True)
     plt.close()
@@ -566,8 +486,8 @@ text-transform:uppercase;letter-spacing:0.1em;margin:0 0 10px 0;'>Price Adjustme
 
 st.markdown("""
 <div style='height:1px;background:#1a2040;margin:40px 0 20px 0;'></div>
-<div style='display:flex;justify-content:space-between;align-items:center;padding:0 0 32px 0;'>
-<p style='font-family:DM Mono,monospace;font-size:0.72rem;color:#3a4060;margin:0;'>
+<div style='display:flex;justify-content:space-between;align-items:center;padding:0 0 32px 0;flex-wrap:wrap;gap:8px;'>
+<p style='font-family:DM Mono,monospace;font-size:0.72rem;color:#ffffff;opacity:0.25;margin:0;'>
 Built by Ogbebor Osaheni &nbsp;·&nbsp; XGBoost + SHAP + Optuna &nbsp;·&nbsp; CMA-compliant dynamic pricing
 </p>
 <p style='font-family:DM Mono,monospace;font-size:0.72rem;margin:0;'>
